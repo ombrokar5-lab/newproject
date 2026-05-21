@@ -16,6 +16,7 @@ const initialAuthForm = {
   email: '',
   phone: '',
   password: '',
+  otpCode: '',
 };
 
 const studentApi = '/api/students';
@@ -33,7 +34,8 @@ export default function App() {
   const [authUser, setAuthUser] = useState(null);
   const [activeView, setActiveView] = useState('dashboard');
   const [profileMessage, setProfileMessage] = useState('');
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [otpStatus, setOtpStatus] = useState('');
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '', otpCode: '', targetType: 'email' });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -85,9 +87,33 @@ export default function App() {
     setAuthForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleSendRegisterOtp = async () => {
+    setAuthError('');
+    setOtpStatus('');
+
+    const phone = authForm.phone.trim();
+    if (!phone) {
+      setAuthError('Enter your phone number before requesting an OTP.');
+      return;
+    }
+
+    try {
+      await axios.post(`${authApi}/send-otp`, {
+        phone,
+        purpose: 'register',
+      });
+      setOtpStatus('OTP sent to your phone. Enter it below to complete registration.');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Unable to send OTP.';
+      setAuthError(errorMsg);
+      console.error('Send OTP error:', err);
+    }
+  };
+
   const handleLoginRegister = async (event) => {
     event.preventDefault();
     setAuthError('');
+    setOtpStatus('');
 
     try {
       if (authMode === 'register') {
@@ -95,6 +121,7 @@ export default function App() {
           email: authForm.email,
           phone: authForm.phone,
           password: authForm.password,
+          otpCode: authForm.otpCode,
         });
         setAuthMode('login');
         setAuthForm({ ...initialAuthForm, identifier: authForm.email });
@@ -148,13 +175,28 @@ export default function App() {
     setPasswordForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleSendPasswordOtp = async (targetType) => {
+    setProfileMessage('');
+    setError('');
+    setPasswordForm((prev) => ({ ...prev, targetType }));
+
+    try {
+      const response = await axios.post(`${authApi}/send-password-otp`, { targetType });
+      setProfileMessage(response.data.message || `OTP sent to your ${targetType}.`);
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Unable to send password OTP.';
+      setProfileMessage(errorMsg);
+      console.error('Send password OTP error:', err);
+    }
+  };
+
   const handlePasswordUpdate = async (event) => {
     event.preventDefault();
     setProfileMessage('');
     setError('');
 
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setProfileMessage('All password fields are required.');
+    if (!passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setProfileMessage('New password and confirmation are required.');
       return;
     }
 
@@ -164,13 +206,21 @@ export default function App() {
     }
 
     try {
-      const response = await axios.put(`${authApi}/password`, {
-        currentPassword: passwordForm.currentPassword,
+      const payload = {
         newPassword: passwordForm.newPassword,
         confirmPassword: passwordForm.confirmPassword,
-      });
+      };
+
+      if (passwordForm.otpCode) {
+        payload.otpCode = passwordForm.otpCode;
+        payload.targetType = passwordForm.targetType;
+      } else {
+        payload.currentPassword = passwordForm.currentPassword;
+      }
+
+      const response = await axios.put(`${authApi}/password`, payload);
       setProfileMessage(response.data.message || 'Password updated successfully.');
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '', otpCode: '', targetType: passwordForm.targetType });
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.message || 'Unable to update password.';
       setProfileMessage(errorMsg);
@@ -281,6 +331,21 @@ export default function App() {
                     required
                   />
                 </label>
+                <div className="row otp-controls">
+                  <button type="button" className="secondary" onClick={handleSendRegisterOtp}>
+                    Send OTP to Phone
+                  </button>
+                </div>
+                {otpStatus && <div className="success-box">{otpStatus}</div>}
+                <label>
+                  OTP Code
+                  <input
+                    name="otpCode"
+                    value={authForm.otpCode}
+                    onChange={handleAuthChange}
+                    required={authMode === 'register'}
+                  />
+                </label>
               </>
             )}
             <label>
@@ -343,6 +408,25 @@ export default function App() {
           </p>
           {profileMessage && <div className="success-box">{profileMessage}</div>}
           <form onSubmit={handlePasswordUpdate}>
+            <div className="row otp-controls">
+              <button type="button" className="secondary" onClick={() => handleSendPasswordOtp('email')}>
+                Send OTP to Email
+              </button>
+              {authUser.phone && (
+                <button type="button" className="secondary" onClick={() => handleSendPasswordOtp('phone')}>
+                  Send OTP to Phone
+                </button>
+              )}
+            </div>
+            <label>
+              OTP Code
+              <input
+                name="otpCode"
+                value={passwordForm.otpCode}
+                onChange={handlePasswordChange}
+              />
+            </label>
+            <p className="otp-note">Enter OTP if you want to update your password using your registered contact method. Otherwise, provide your current password.</p>
             <label>
               Current Password
               <input
@@ -350,7 +434,7 @@ export default function App() {
                 type="password"
                 value={passwordForm.currentPassword}
                 onChange={handlePasswordChange}
-                required
+                required={!passwordForm.otpCode}
               />
             </label>
             <label>

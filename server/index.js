@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const studentRoutes = require('./routes/studentRoutes');
+const authRoutes = require('./routes/authRoutes');
+const authMiddleware = require('./middleware/authMiddleware');
 
 dns.setServers(['1.1.1.1', '8.8.8.8']);
 
@@ -12,7 +14,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/students', studentRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/students', authMiddleware, studentRoutes);
 
 app.get('/', (req, res) => {
   res.send('Student Database Management API');
@@ -48,7 +51,9 @@ function buildMongoUri() {
 }
 
 const MONGO_URI = buildMongoUri();
-const PORT = process.env.PORT || 5000;
+const http = require('http');
+const startingPort = Number(process.env.PORT || 5000);
+let currentPort = startingPort;
 
 console.log('Environment Variables:');
 console.log('MONGO_URI env:', process.env.MONGO_URI ? 'SET' : 'NOT SET');
@@ -58,6 +63,28 @@ console.log('MONGO_DB:', process.env.MONGO_DB);
 console.log('Built connection URI:', MONGO_URI);
 console.log('Connecting to MongoDB...');
 
+const server = http.createServer(app);
+
+function onServerError(error) {
+  if (error.syscall !== 'listen') {
+    console.error('✗ Server error:', error);
+    process.exit(1);
+  }
+
+  const bind = `Port ${currentPort}`;
+  if (error.code === 'EADDRINUSE') {
+    const fallbackPort = currentPort + 1;
+    console.warn(`⚠ ${bind} is already in use. Trying ${fallbackPort}...`);
+    currentPort = fallbackPort;
+    server.listen(currentPort);
+  } else {
+    console.error('✗ Server error:', error);
+    process.exit(1);
+  }
+}
+
+server.on('error', onServerError);
+
 mongoose
   .connect(MONGO_URI, {
     useNewUrlParser: true,
@@ -65,8 +92,8 @@ mongoose
   })
   .then(() => {
     console.log('✓ Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`✓ Server running on port ${PORT}`);
+    server.listen(currentPort, () => {
+      console.log(`✓ Server running on port ${currentPort}`);
     });
   })
   .catch((error) => {

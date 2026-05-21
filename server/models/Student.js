@@ -8,6 +8,7 @@ const studentSchema = new mongoose.Schema(
     phone: { type: String, trim: true },
     major: { type: String, trim: true },
     enrollmentDate: { type: Date, default: Date.now },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   {
     timestamps: true,

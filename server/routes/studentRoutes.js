@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const students = await Student.find().sort({ createdAt: -1 });
+    const students = await Student.find({ createdBy: req.user.id }).sort({ createdAt: -1 });
     res.json(students);
   } catch (error) {
     console.error('Fetch students error:', error.message);
@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const student = await Student.findById(req.params.id);
+    const student = await Student.findOne({ _id: req.params.id, createdBy: req.user.id });
     if (!student) {
       return res.status(404).json({ error: 'Student not found.' });
     }
@@ -28,7 +28,15 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { firstName, lastName, email, phone, major, enrollmentDate } = req.body;
-    const student = new Student({ firstName, lastName, email, phone, major, enrollmentDate });
+    const student = new Student({
+      firstName,
+      lastName,
+      email,
+      phone,
+      major,
+      enrollmentDate,
+      createdBy: req.user.id,
+    });
     await student.save();
     res.status(201).json(student);
   } catch (error) {
@@ -39,10 +47,14 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const student = await Student.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const student = await Student.findOneAndUpdate(
+      { _id: req.params.id, createdBy: req.user.id },
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
     if (!student) {
       return res.status(404).json({ error: 'Student not found.' });
     }
@@ -55,7 +67,7 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const student = await Student.findByIdAndDelete(req.params.id);
+    const student = await Student.findOneAndDelete({ _id: req.params.id, createdBy: req.user.id });
     if (!student) {
       return res.status(404).json({ error: 'Student not found.' });
     }

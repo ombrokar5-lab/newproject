@@ -93,6 +93,29 @@ button.danger {
   background: #dc2626;
 }
 
+.view-nav {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.view-nav button {
+  min-width: 140px;
+}
+
+.view-nav button.active {
+  background: #111827;
+}
+
+.success-box {
+  padding: 12px 14px;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 10px;
+  color: #065f46;
+  margin-bottom: 16px;
+}
+
 .error-box {
   padding: 12px 14px;
   background: #fee2e2;

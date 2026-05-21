@@ -239,16 +239,17 @@ export default function App() {
 
   if (!authUser) {
     return (
-      <div className="app-container">
-        <header>
-          <h1>Student Management Login</h1>
-          <p>Login with email or phone and password.</p>
-        </header>
+      <div className="login-page">
+        <div className="app-container">
+          <header>
+            <h1>Student Management Login</h1>
+            <p>Login with email or phone and password.</p>
+          </header>
 
-        <section className="form-panel">
-          <h2>{authMode === 'register' ? 'Register' : 'Login'}</h2>
-          {(authError || error) && <div className="error-box">{authError || error}</div>}
-          <form onSubmit={handleLoginRegister}>
+          <section className="form-panel">
+            <h2>{authMode === 'register' ? 'Register' : 'Login'}</h2>
+            {(authError || error) && <div className="error-box">{authError || error}</div>}
+            <form onSubmit={handleLoginRegister}>
             {authMode === 'login' ? (
               <label>
                 Email or Phone
@@ -309,6 +310,7 @@ export default function App() {
           </form>
         </section>
       </div>
+    </div>
     );
   }
 

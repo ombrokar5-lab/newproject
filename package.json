@@ -1,0 +1,13 @@
+{
+  "name": "student-management-mern",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["server", "client"],
+  "scripts": {
+    "dev": "concurrently \"npm --workspace server run dev\" \"npm --workspace client run dev\"",
+    "start": "npm --workspace server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
